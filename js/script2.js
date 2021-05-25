@@ -1,0 +1,583 @@
+// ---------- SEASON OBJECTS ----------
+const LOW = Object.freeze({
+    name: "LOW",
+    price: 200,
+    starts: "Jun 1, ",
+    ends: "Dec 18, "
+});
+const MID = Object.freeze({
+    name: "MID",
+    price: 220,
+    starts: "Feb 1, ",
+    ends: "May 31, "
+});
+const HIGH = Object.freeze({
+    name: "HIGH",
+    price: 250,
+    starts: "Dec 19, ",
+    ends: "Jan 31, "
+});
+
+// ---------TIME DATA ---------
+const msxDay = 86400000; // milliseconds per day
+// Current day and time values
+var now = new Date();
+var currYear = now.getFullYear();
+var currMonth = now.getMonth();
+var currDay = now.getDate();
+// Today's Date object starting a 0:00:00.000
+var today = new Date(currYear, currMonth, currDay);
+// Date object for the first day of current Month
+var firstDCurrM = new Date(currYear, currMonth);
+// Date object for day 3 months from today
+var todayPlus3m = new Date(currYear, currMonth + 3, currDay);
+// Number of calendars to create
+var numMonths = monthDiff(today, todayPlus3m);
+var numValidDays = (todayPlus3m - today) / msxDay;
+
+// --------- CREATE CALENDAR TABLES ---------
+// Depending of the current date the number of months calculated 
+//to hold the 3 month can vary: from 3 up to 5 calendars can be created
+createNCalendars("container", numMonths, currYear, currMonth);
+
+// --------- SET UP CALENDARS ---------
+var totalDays = NumberAllDays();
+var todayID = MarkToday(today);
+var lastDayID = MarkADay(firstDCurrM, todayPlus3m, "last-day");
+markDaysOutOfRange(todayID, lastDayID, "td.day-date", "no-bookable", "day-date");
+// Add the seasons for pricing
+addSeasons(".day-date");
+// Add EventListeners
+addListeners();
+
+// --------- CHECK-IN CHECK-OUT ---------
+// Check in and check out objects
+const CHECKIN = { dayID: "", dayIDNum: 0, selected: false, name: "check-in-day", domstring: ".check-in-day", outputEl: "check-in" };
+const CHECKOUT = { dayID: "", dayIDNum: 0, selected: false, name: "check-out-day", domstring: ".check-out-day", outputEl: "check-out" };
+const DatePHolder = "Mmm dd, yyyy";
+
+//#region functions
+
+/**
+ * Calculates the difference of months between
+ * two dates without considering the days
+ * 
+ * @param {Date} dateFrom - Date object for the earliest date
+ * @param {Date} dateTo - Date object for the latest date
+ * @returns {number} - Months difference between two dates
+ * 
+ * @example - Even though there are a few days difference between
+ * this two dates, the function will return 1 because they
+ * are in different months:
+ * 
+ *  let d1 = new Date(2021, 4, 31);
+ *  let d2 = new Date(2021, 5, 1);
+ *  console.log(monthDiff(d1,d2));
+ *  >> 1
+ */
+function monthDiff(dateFrom, dateTo) {
+    let months = dateTo.getMonth() - dateFrom.getMonth();
+    // year difference adjustment
+    // if the dates are in different years add 12 months per year difference
+    months += 12 * (dateTo.getFullYear() - dateFrom.getFullYear());
+    return months;
+}
+
+/**
+ * Adds event listeners to day elements in the calendar
+ */
+function addListeners() {
+    let days = document.querySelectorAll("td.day-date");
+    days.forEach(day => {
+        //day.addEventListener("click", function () { daySelect(day.id, "selected-day"); });
+        //day.addEventListener("mouseover", function () { daySelect(day.id, "selected-day"); });
+        day.addEventListener("click", function () { CheckInNOut(day.id); });
+        day.addEventListener("mouseenter", function () { hoverDaysIn(day.id); });
+        day.addEventListener("mouseleave", function () { hoverDaysOut(day.id); });
+        day.addEventListener("click", function () { console.log(`day-id: ${day.id}`); });
+        day.addEventListener("click", function () { console.log(getDateString(day.id)); });
+        day.addEventListener("click", function () { console.log(getPrice(day.id)); });
+
+    });
+}
+
+/**
+ * Creates a table representing a calendar for a given month
+ * on a given year
+ * @param {string} container - An id of a DOM element to contain the calendar
+ * @param {number} year
+ * @param {number} month - 0 to 11 (January is 0)
+ * 
+ * @example - creates a calendar for May, 2021 in an element.id = container
+ * 
+ * createCalendar("container", 2021, 4);
+ */
+function createCalendar(container, year, month) {
+    // arrays for date related names
+    const dayNames = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", 'Sep', "Oct", "Nov", "Dec"];
+
+    // create a Date object for a given month,
+    // if day is not specified, default date is: year/month/1
+    let d = new Date(year, month);
+
+
+    // create a table element for the calendar
+    let table = document.createElement('table');
+    table.classList.add('month');
+    table.id = `${months[month]}`;
+
+    // Create a row for header with month and year
+    let rowMonthYear = document.createElement('tr');
+    rowMonthYear.className = 'month-header';
+    let header = document.createElement('th');
+    header.colSpan = 7;
+    header.textContent = `${months[month]}, ${year}`;
+    header.id = `${months[month]}-${year}`; // for building a date string
+    // Append header to table
+    rowMonthYear.appendChild(header);
+    table.appendChild(rowMonthYear);
+
+    // Create the row for the day names
+    let rowDay = document.createElement('tr'); rowDay.className = 'r-day';
+    // Create column headers with day names
+    dayNames.forEach(day => {
+        let dayName = document.createElement('th');
+        rowDay.appendChild(dayName);
+        dayName.textContent = day;
+    });
+    // Append the day names row to table
+    table.appendChild(rowDay);
+
+    // Append table(month) to the container element
+    document.getElementById(container).appendChild(table);
+
+    // Week counter
+    let weekCount = 0;
+
+    //Add first week row
+    let rowWeek = document.createElement('tr');
+    rowWeek.className = 'week-row'; rowWeek.id = `week${weekCount}-${month}`;
+    table.appendChild(rowWeek);
+
+    // Create empty <td> element for empty days
+    let noDay = document.createElement('td');
+    noDay.className = 'no-day';
+
+    // create a dateDay element for calendar days
+    let dayDate = document.createElement('td');
+    dayDate.className = 'day-date';
+
+    // Add empty days in the first row from Monday till first day of the month
+    for (let index = 0; index < getDay(d); index++) {
+        rowWeek.appendChild(noDay.cloneNode(false));
+    }
+
+    // Add <td> elements with actual days
+    // While we are still in the month
+    while (d.getMonth() == month) {
+        let currWeek = document.getElementById(`week${weekCount}-${month}`);
+        currWeek.append(dayDate.cloneNode(false));
+        currWeek.lastElementChild.textContent = `${d.getDate()}`;
+        if (getDay(d) % 7 == 6) { // if is Sunday, a new row is needed
+            weekCount++;
+            rowWeek = rowWeek.cloneNode(false);
+            rowWeek.id = `week${weekCount}-${month}`;
+            table.appendChild(rowWeek);
+        }
+        d.setDate(d.getDate() + 1);
+    }
+
+    // Add empty days for the last days of the month
+    // if the month does not end in Sunday
+    if (getDay(d) != 0) {
+        for (let index = getDay(d); index < 7; index++) {
+            table.lastChild.appendChild(noDay.cloneNode(false));
+        }
+    }
+}
+
+/**
+ * Converts the built-in number of the week from 0-6 starting on Sunday
+ * to 1-7 starting on Monday.
+ * 
+ * @param {Date} date - a Date object
+ * @returns {number} - day of week as number 0 to 6 starting Monday
+ */
+function getDay(date) { // get day number from 0 (monday) to 6 (sunday)
+    let day = date.getDay();
+    if (day == 0) day = 7; // make Sunday (0) the last day
+    return day - 1;
+}
+
+/**
+ * Creates a n number of calendars in a given element
+ * starting in a given month.
+ * 
+ * @param {string} container - An id of a DOM element to contain the calendars
+ * @param {num} months - Number of months
+ * @param {num} year - The year of the first month
+ * @param {num} startMonth - The starting month (format 0-11, e.g. January is 0)
+ */
+function createNCalendars(container, months, startYear, startMonth) {
+    let month = startMonth;
+    let year = startYear;
+
+    for (let i = 0; i <= months; i++) {
+        let calendar = document.createElement('div');
+        calendar.id = `calendar${i + 1}`; calendar.className = "month-cal";
+        document.getElementById(container).appendChild(calendar);
+        // if month > 11 you are in a new year and month is 0 (Jan)
+        if (month > 11) {
+            month = 0;
+            year++;
+            createCalendar(calendar.id, year, month++);
+        } else {
+            createCalendar(calendar.id, year, month++);
+        }
+    }
+}
+
+/**
+ * Adds an Id to every day element in the calendar.
+ * The id consists of the word 'day', a dash '-' and
+ * a number corresponding to the global number of the day 
+ * regardless of the month.
+ * 
+ * @returns {number} The total number of days in the calendars
+ * 
+ * @example For a calendar where the first month has 31 days
+ * the id for the first day of the next month will be:
+ * 
+ * 'day-32'
+ */
+function NumberAllDays() {
+    let days = document.querySelectorAll("td.day-date"); // can be a constant string to name days
+    for (let i = 0; i < days.length; i++) {
+        days[i].id = `day-${i + 1}`;
+    }
+    return days.length;
+}
+
+/**
+ * Adds the class name 'today' to the corresponding
+ * day passed as a Date of the first month. Only works
+ * with the first month.
+ * 
+ * @param {Date} date - The Date object for the current day.
+ * @returns {string} - The id for today's element in the calendar
+ */
+function MarkToday(date) {
+    let dayID = `day-${date.getDate()}`;
+    let today = document.getElementById(`day-${date.getDate()}`);
+    today.classList.add('today');
+    return dayID;
+}
+
+/**
+ * Marks in the calendar a passed Date with the passed
+ * class Name.
+ * 
+ * @param {Date} dateFirstDay - Date object for the first day of the set of calendars
+ * @param {Date} dateToMark - Date object for the day to be marked
+ * @param {string} className - The class name to be assigned
+ * @returns {string} - The id of the marked element
+ */
+function MarkADay(dateFirstDay, dateToMark, className) {
+    let dayNum = (dateToMark.getTime() - dateFirstDay.getTime()) / msxDay;
+    let dayId = `day-${Math.round(dayNum) + 1}`;
+    let day = document.getElementById(dayId);
+    day.classList.add(className);
+    return dayId;
+}
+
+/**
+ * Adds a passed class name to a group of day elements
+ * that fall outside a given time range.
+ * 
+ * @param {string} day1ID - Earliest day element id in format "day-8"
+ * @param {string} day2ID - Latest day element id 
+ * @param {string} selector - A DOMString containing one or more selectors to match against
+ * @param {string} newClass - The name of the class to be assigned
+ * @param {string} [oldClass=undefined] - The name of the class to be removed
+ */
+function markDaysOutOfRange(day1ID, day2ID, selector, newClass, oldClass = undefined) {
+    let firstDayNum = parseInt(day1ID.split("-")[1]);
+    let lastDayNum = parseInt(day2ID.split("-")[1]);
+    let days = document.querySelectorAll(selector);
+    days.forEach(dayEl => {
+        let elNum = parseInt(dayEl.id.split("-")[1]);
+        if (elNum < firstDayNum || elNum > lastDayNum) {
+            dayEl.classList.add(newClass);
+            dayEl.classList.remove(oldClass);
+        }
+    });
+}
+
+/**
+ * Adds a passed class name to a group of day elements
+ * that fall inside a given time range.
+ * 
+ * @param {string} day1ID - Earliest day element id in format "day-8"
+ * @param {string} day2ID - Latest day element id 
+ * @param {string} selector - A DOMString containing one or more selectors to match against
+ * @param {string} className - The name of the class to be assigned
+ */
+function markDaysInRange(day1ID, day2ID, selector, className) {
+    let firstDayNum = parseInt(day1ID.split("-")[1]);
+    let lastDayNum = parseInt(day2ID.split("-")[1]);
+    let days = document.querySelectorAll(selector);
+    days.forEach(dayEl => {
+        let elNum = parseInt(dayEl.id.split("-")[1]);
+        if (elNum > firstDayNum || elNum < lastDayNum) {
+            dayEl.classList.add(className); // consider toggle***************
+        }
+    });
+}
+
+/**
+ * Adds a specified class name to the day with
+ * the passed id.
+ * 
+ * @param {string} dayID - Day element id in format "day-8"
+ * @param {string} className - The name of the class to be assigned
+ */
+function daySelect(dayID, className) {
+    let day = document.getElementById(dayID);
+    day.classList.toggle(className);
+}
+
+/**
+ * Creates a valid date string for a given day-id that 
+ * can be passed to a Date() constructor.
+ * 
+ * @param {string} dayID - Day element id in format "day-8"
+ * @returns {string} - A valid Date string in format "Apr 16, 1998"
+ */
+function getDateString(dayID) {
+    let day = document.getElementById(dayID);
+    let yearMonth = day.closest(".month").firstChild.firstChild.id;
+    let month = yearMonth.split("-")[0];
+    let year = yearMonth.split("-")[1];
+    let dateString = `${month} ${day.innerText}, ${year}`;
+    return dateString;
+}
+
+/**
+ * Gets an returns the price stored in a "Season" object:
+ * "LOW", "MID", "HIGH".    
+ * 
+ * @param {string} dayId - Day element id in format "day-8"
+ * @returns {number} - The price per night for the given day
+ */
+function getPrice(dayId) {
+    let dayEl = document.getElementById(dayId);
+    if (dayEl.classList.contains("LOW")) {
+        return LOW.price;
+    } else if (dayEl.classList.contains("MID")) {
+        return MID.price;
+    } else {
+        return HIGH.price;
+    }
+}
+
+/**
+ * Adds a class to the calendar day elements to identify 
+ * in which season of the year the day falls
+ * @param {string} dayClassName - DOMString containing the class name for calendar days
+ */
+function addSeasons(dayClassName) {
+    var days = document.querySelectorAll(dayClassName);
+    days.forEach(day => {
+        let dayDate = new Date(getDateString(day.id));
+        let year = dayDate.getFullYear();
+        let lowStarts = new Date(LOW.starts + year);
+        let lowEnds = new Date(LOW.ends + year);
+        let midStarts = new Date(MID.starts + year);
+        let midEnds = new Date(MID.ends + year);
+        if ((dayDate >= lowStarts) && (dayDate <= lowEnds)) {
+            day.classList.add(LOW.name);
+        } else if ((dayDate >= midStarts) && (dayDate <= midEnds)) {
+            day.classList.add(MID.name);
+        } else {
+            day.classList.add(HIGH.name);
+        }
+    });
+}
+
+/**
+ * Finds out if a given class name exists in a group of
+ * elements with the passed CSS selector
+ * 
+ * @param {string} classToSearch - The name of the class to search as a string
+ * @param {string} selector - A DOMString.  Must be a valid CSS selector string:
+ * @returns {boolean}
+ * 
+ * @example 
+ * Does the class name "HIGH" exists in at least one of the 
+ * elements with a class ".day-date":
+ * 
+ * elementsContain("HIGH", ".day-date");
+ * 
+ */
+function elementsContain(classToSearch, selector) {
+    let elements = document.querySelectorAll(selector);
+    for (let i = 0; i < elements.length; i++) {
+        if (elements[i].classList.contains(classToSearch)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Adds the check-in class to the day with
+ * the passed id.
+ * 
+ * @param {string} dayID - Day element id in format "day-8"
+ * @param {string} className - The name of the check-in class to be assigned
+ */
+function CheckInNOut(dayID) {
+    let day = document.getElementById(dayID);
+    let dayIDNum = parseInt(dayID.split("-")[1]);
+    // CASE 1 - Nothing is selected
+    if (!CHECKIN.selected) {
+        day.classList.toggle(CHECKIN.name);
+        CHECKIN.dayID = dayID;
+        CHECKIN.dayIDNum = dayIDNum;
+        CHECKIN.selected = true;
+        // Update CHECKIN output elements
+        document.getElementById(CHECKIN.outputEl).textContent = (getDateString(CHECKIN.dayID));
+        document.getElementById(CHECKIN.outputEl).classList.add("selected");
+        // TODO Make following dates mouseover sensitive
+    } 
+    // CASE 2 - Only CHECKIN already selected
+    else if (CHECKIN.selected && !CHECKOUT.selected) {
+        // if click on a day before currently selected
+        if (dayIDNum < CHECKIN.dayIDNum) { 
+            document.getElementById(CHECKIN.dayID).classList.toggle(CHECKIN.name); //Remove previous check in
+            day.classList.toggle(CHECKIN.name); // Select day clicked as new Check in
+            CHECKIN.dayID = dayID;
+            CHECKIN.dayIDNum = dayIDNum;
+            // Update CHECKIN output element
+            document.getElementById(CHECKIN.outputEl).textContent = (getDateString(CHECKIN.dayID));
+            // TODO Make following dates mouseover sensitive
+        } 
+        // if click on a day after selected CHECKIN
+        else if (dayIDNum > CHECKIN.dayIDNum) { // BINGO! Means this is the check-out day
+            day.classList.toggle(CHECKOUT.name);
+            CHECKOUT.dayID = dayID;
+            CHECKOUT.dayIDNum = dayIDNum;
+            CHECKOUT.selected = true;
+            // Update CHECKOUT output element
+            document.getElementById(CHECKOUT.outputEl).textContent = (getDateString(CHECKOUT.dayID));
+            document.getElementById(CHECKOUT.outputEl).classList.add("selected");
+            // Highlight elements between the two days
+            // Get number of nights and update corresponding <b></b> element in label
+            // Calculate price and update total element box
+        } 
+        // if Clicked on the same day => reset
+        else {
+            day.classList.toggle(CHECKIN.name);
+            CHECKIN.dayID = "";
+            CHECKIN.dayIDNum = 0;
+            CHECKIN.selected = false;
+            // Update CHECKIN output element
+            document.getElementById(CHECKIN.outputEl).textContent = DatePHolder;
+            document.getElementById(CHECKIN.outputEl).classList.remove("selected");
+        }
+    } 
+    // CASE 3 - CHECKIN & CHECKOUT selected
+    else if (CHECKIN.selected && CHECKOUT.selected) {
+        // if click on a different day later than Check in => new Check out
+        if ((dayIDNum > CHECKIN.dayIDNum) && (dayIDNum != CHECKOUT.dayIDNum)) {
+            document.getElementById(CHECKOUT.dayID).classList.toggle(CHECKOUT.name); // Remove previous check out
+            day.classList.toggle(CHECKOUT.name);
+            CHECKOUT.dayID = dayID;
+            CHECKOUT.dayIDNum = dayIDNum;
+            // Update CHECKOUT output element
+            document.getElementById(CHECKOUT.outputEl).textContent = (getDateString(CHECKOUT.dayID));
+            // Highlight elements between the two days
+            // Get number of nights and update corresponding <b></b> element in label
+            // Calculate price and update total element box
+        } 
+        // if click before check in, set new check in, erase check out
+        else if (dayIDNum < CHECKIN.dayIDNum ) { 
+            // CHECKIN element
+            document.getElementById(CHECKIN.dayID).classList.toggle(CHECKIN.name);
+            day.classList.toggle(CHECKIN.name);
+            CHECKIN.dayID = dayID;
+            CHECKIN.dayIDNum = dayIDNum;
+             // Update CHECKIN output elements
+            document.getElementById(CHECKIN.outputEl).textContent = (getDateString(CHECKIN.dayID));
+            // CHECKOUT element
+            document.getElementById(CHECKOUT.dayID).classList.toggle(CHECKOUT.name);
+            CHECKOUT.dayID = "";
+            CHECKOUT.dayIDNum = 0;
+            CHECKOUT.selected = false;
+            // Update CHECKOUT output element
+            document.getElementById(CHECKOUT.outputEl).textContent = DatePHolder;
+            document.getElementById(CHECKOUT.outputEl).classList.remove("selected");
+        }
+        // if click on an already selected check out date, erase check out
+        else if (dayIDNum == CHECKOUT.dayIDNum) { 
+            day.classList.toggle(CHECKOUT.name);
+            CHECKOUT.dayID = "";
+            CHECKOUT.dayIDNum = 0;
+            CHECKOUT.selected = false;
+            // Update CHECKOUT output element
+            document.getElementById(CHECKOUT.outputEl).textContent = DatePHolder;
+            document.getElementById(CHECKOUT.outputEl).classList.remove("selected");
+        } 
+        // if click in already selected check in => reset all
+        else {
+            // CHECKIN element
+            day.classList.toggle(CHECKIN.name);
+            CHECKIN.dayID = "";
+            CHECKIN.dayIDNum = 0;
+            CHECKIN.selected = false;
+            document.getElementById(CHECKIN.outputEl).textContent = DatePHolder;
+            document.getElementById(CHECKIN.outputEl).classList.remove("selected");
+            // CHECKOUT element
+            document.getElementById(CHECKOUT.dayID).classList.toggle(CHECKOUT.name);
+            CHECKOUT.dayID = "";
+            CHECKOUT.dayIDNum = 0;
+            CHECKOUT.selected = false;
+            document.getElementById(CHECKOUT.outputEl).textContent = DatePHolder;
+            document.getElementById(CHECKOUT.outputEl).classList.remove("selected");
+        }
+    }
+    // console.log(checkInSelected);
+    //checkInSelected ? checkInSelected = false : 
+}
+
+function hoverDaysIn(dayID) {
+    console.log("in hoverDaysIn func");
+    document.getElementById(dayID).classList.add("hover-in");
+}
+
+function hoverDaysOut(dayID) {
+    document.getElementById(dayID).classList.remove("hover-in");
+}
+/**
+ * @deprecated
+ * Gets all the elements in the document with the given
+ * selector and returns the count.
+ * 
+ * @param {string} selector - A DOMString containing one selector
+ * @returns {number} 
+ */
+function HowManyElements(selector) {
+    let days = document.querySelectorAll(selector);
+    return days.length;
+}
+
+//#endregion
+
+// TODO Add program to Sorrento and Start version control
+
+// TODO Add functionality to select dates
+// TODO Add boxes to display messages
+// TODO Add Check-in and Check-out functionality
+
+
