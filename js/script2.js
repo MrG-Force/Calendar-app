@@ -18,6 +18,12 @@ const HIGH = Object.freeze({
     ends: "Jan 31, "
 });
 
+// --------- CHECK-IN CHECK-OUT ---------
+// Check in and check out objects
+const CHECKIN = { dayID: "", dayIDNum: 0, selected: false, name: "check-in-day", domstring: ".check-in-day", outputEl: "check-in" };
+const CHECKOUT = { dayID: "", dayIDNum: 0, selected: false, name: "check-out-day", domstring: ".check-out-day", outputEl: "check-out" };
+const DatePHolder = "Mmm dd, yyyy";
+
 // ---------TIME DATA ---------
 const msxDay = 86400000; // milliseconds per day
 // Current day and time values
@@ -47,14 +53,16 @@ var lastDayID = MarkADay(firstDCurrM, todayPlus3m, "last-day");
 markDaysOutOfRange(todayID, lastDayID, "td.day-date", "no-bookable", "day-date");
 // Add the seasons for pricing
 addSeasons(".day-date");
+
+
 // Add EventListeners
+//helperListeners() // debugging
+const controller = new AbortController();// !!!!!!!!!!!!!This did the trick 
+const hoverDaysIn = function (dayID) { document.getElementById(dayID).classList.add("hover-in") };
+const hoverDaysOut = function (dayID) { document.getElementById(dayID).classList.remove("hover-in") };
 addListeners();
 
-// --------- CHECK-IN CHECK-OUT ---------
-// Check in and check out objects
-const CHECKIN = { dayID: "", dayIDNum: 0, selected: false, name: "check-in-day", domstring: ".check-in-day", outputEl: "check-in" };
-const CHECKOUT = { dayID: "", dayIDNum: 0, selected: false, name: "check-out-day", domstring: ".check-out-day", outputEl: "check-out" };
-const DatePHolder = "Mmm dd, yyyy";
+
 
 //#region functions
 
@@ -82,22 +90,29 @@ function monthDiff(dateFrom, dateTo) {
     months += 12 * (dateTo.getFullYear() - dateFrom.getFullYear());
     return months;
 }
+/**
+ * 
+ */
+function addListeners() {
+    let days = document.querySelectorAll(".day-date");
+    days.forEach(day => {
+        day.addEventListener("click", function () { CheckInNOut(day.id); });
+        day.addEventListener("mouseenter", function () { hoverDaysIn(day.id) }, { signal: controller.signal });
+        day.addEventListener("mouseleave", function () { hoverDaysOut(day.id) });
+    });
+}
 
 /**
  * Adds event listeners to day elements in the calendar
  */
-function addListeners() {
+function helperListeners() {
     let days = document.querySelectorAll("td.day-date");
     days.forEach(day => {
         //day.addEventListener("click", function () { daySelect(day.id, "selected-day"); });
         //day.addEventListener("mouseover", function () { daySelect(day.id, "selected-day"); });
-        day.addEventListener("click", function () { CheckInNOut(day.id); });
-        day.addEventListener("mouseenter", function () { hoverDaysIn(day.id); });
-        day.addEventListener("mouseleave", function () { hoverDaysOut(day.id); });
-        day.addEventListener("click", function () { console.log(`day-id: ${day.id}`); });
-        day.addEventListener("click", function () { console.log(getDateString(day.id)); });
-        day.addEventListener("click", function () { console.log(getPrice(day.id)); });
-
+        day.addEventListener("click", function () { console.log(`day-id: ${day.id}`); }); // just for testing
+        day.addEventListener("click", function () { console.log(getDateString(day.id)); }); // just for testing
+        day.addEventListener("click", function () { console.log(getPrice(day.id)); });  // just for testing
     });
 }
 
@@ -449,12 +464,15 @@ function CheckInNOut(dayID) {
         // Update CHECKIN output elements
         document.getElementById(CHECKIN.outputEl).textContent = (getDateString(CHECKIN.dayID));
         document.getElementById(CHECKIN.outputEl).classList.add("selected");
+        // Remove highlighter on hover handler
+        controller.abort();
         // TODO Make following dates mouseover sensitive
-    } 
+
+    }
     // CASE 2 - Only CHECKIN already selected
     else if (CHECKIN.selected && !CHECKOUT.selected) {
         // if click on a day before currently selected
-        if (dayIDNum < CHECKIN.dayIDNum) { 
+        if (dayIDNum < CHECKIN.dayIDNum) {
             document.getElementById(CHECKIN.dayID).classList.toggle(CHECKIN.name); //Remove previous check in
             day.classList.toggle(CHECKIN.name); // Select day clicked as new Check in
             CHECKIN.dayID = dayID;
@@ -462,7 +480,7 @@ function CheckInNOut(dayID) {
             // Update CHECKIN output element
             document.getElementById(CHECKIN.outputEl).textContent = (getDateString(CHECKIN.dayID));
             // TODO Make following dates mouseover sensitive
-        } 
+        }
         // if click on a day after selected CHECKIN
         else if (dayIDNum > CHECKIN.dayIDNum) { // BINGO! Means this is the check-out day
             day.classList.toggle(CHECKOUT.name);
@@ -475,7 +493,7 @@ function CheckInNOut(dayID) {
             // Highlight elements between the two days
             // Get number of nights and update corresponding <b></b> element in label
             // Calculate price and update total element box
-        } 
+        }
         // if Clicked on the same day => reset
         else {
             day.classList.toggle(CHECKIN.name);
@@ -486,7 +504,7 @@ function CheckInNOut(dayID) {
             document.getElementById(CHECKIN.outputEl).textContent = DatePHolder;
             document.getElementById(CHECKIN.outputEl).classList.remove("selected");
         }
-    } 
+    }
     // CASE 3 - CHECKIN & CHECKOUT selected
     else if (CHECKIN.selected && CHECKOUT.selected) {
         // if click on a different day later than Check in => new Check out
@@ -500,15 +518,15 @@ function CheckInNOut(dayID) {
             // Highlight elements between the two days
             // Get number of nights and update corresponding <b></b> element in label
             // Calculate price and update total element box
-        } 
+        }
         // if click before check in, set new check in, erase check out
-        else if (dayIDNum < CHECKIN.dayIDNum ) { 
+        else if (dayIDNum < CHECKIN.dayIDNum) {
             // CHECKIN element
             document.getElementById(CHECKIN.dayID).classList.toggle(CHECKIN.name);
             day.classList.toggle(CHECKIN.name);
             CHECKIN.dayID = dayID;
             CHECKIN.dayIDNum = dayIDNum;
-             // Update CHECKIN output elements
+            // Update CHECKIN output elements
             document.getElementById(CHECKIN.outputEl).textContent = (getDateString(CHECKIN.dayID));
             // CHECKOUT element
             document.getElementById(CHECKOUT.dayID).classList.toggle(CHECKOUT.name);
@@ -520,7 +538,7 @@ function CheckInNOut(dayID) {
             document.getElementById(CHECKOUT.outputEl).classList.remove("selected");
         }
         // if click on an already selected check out date, erase check out
-        else if (dayIDNum == CHECKOUT.dayIDNum) { 
+        else if (dayIDNum == CHECKOUT.dayIDNum) {
             day.classList.toggle(CHECKOUT.name);
             CHECKOUT.dayID = "";
             CHECKOUT.dayIDNum = 0;
@@ -528,7 +546,7 @@ function CheckInNOut(dayID) {
             // Update CHECKOUT output element
             document.getElementById(CHECKOUT.outputEl).textContent = DatePHolder;
             document.getElementById(CHECKOUT.outputEl).classList.remove("selected");
-        } 
+        }
         // if click in already selected check in => reset all
         else {
             // CHECKIN element
@@ -551,14 +569,13 @@ function CheckInNOut(dayID) {
     //checkInSelected ? checkInSelected = false : 
 }
 
-function hoverDaysIn(dayID) {
-    console.log("in hoverDaysIn func");
-    document.getElementById(dayID).classList.add("hover-in");
-}
+// function hoverDaysIn(dayID) {
+//     document.getElementById(dayID).classList.add("hover-in");
+// }
 
-function hoverDaysOut(dayID) {
-    document.getElementById(dayID).classList.remove("hover-in");
-}
+// function hoverDaysOut(dayID) {
+//     document.getElementById(dayID).classList.remove("hover-in");
+// }
 /**
  * @deprecated
  * Gets all the elements in the document with the given
@@ -574,10 +591,16 @@ function HowManyElements(selector) {
 
 //#endregion
 
-// TODO Add program to Sorrento and Start version control
-
-// TODO Add functionality to select dates
-// TODO Add boxes to display messages
-// TODO Add Check-in and Check-out functionality
 
 
+//NOT WORKING
+function removeHandler(event, func, selector) {
+    console.log("removeHandler() called...")
+    let days = document.querySelectorAll(selector);
+    days.forEach(day => {
+        console.log("in removeHandler() loop...")
+        // day.removeEventListener(event, function () { func(day.id); });
+        day.removeEventListener(event, func);
+    });
+    //removeHandler("mouseenter", hoverDaysIn, "td.day-date");
+}
