@@ -59,6 +59,7 @@ addSeasons(".day-date");
 var listenerTracker = 0;
 // Add EventListeners
 helperListeners() // debugging
+//TODO convert into normal functions and move to functions in a subregion Listeners functions
 const hoverDaysIn = function (e) { document.getElementById(e.target.id).classList.add("hover-in") };
 const hoverDaysOut = function (e) { document.getElementById(e.target.id).classList.remove("hover-in"); console.log("mouseleave") };
 function hoverInAfterCheckin(e) {
@@ -66,7 +67,7 @@ function hoverInAfterCheckin(e) {
     console.log("target number =" + targetNum);
     if (targetNum > CHECKIN.dayIDNum) {
         if (listenerTracker == 0) {
-            console.log("This day is after check-in");
+            console.log("This day is after check-in"); // --------------debug
             // add a class to all the elements between the current and checkin
             for (let i = CHECKIN.dayIDNum + 1; i <= targetNum; i++) {
                 document.getElementById(`day-${i}`).classList.add("after-checkin");
@@ -83,8 +84,7 @@ function hoverInAfterCheckin(e) {
                 listenerTracker = i;
             }
         }
-
-        console.log("listener tracker= " + listenerTracker);
+        console.log("listener tracker= " + listenerTracker); // --------------debug
     }
 
 }
@@ -100,8 +100,21 @@ function removeHandler(event, func, selector) {
     let days = document.querySelectorAll(selector);
     days.forEach(day => {
         console.log("in removeHandler() loop...")
-        // day.removeEventListener(event, function () { func(day.id); });
         day.removeEventListener(event, func);
+    });
+}
+
+function removeHandlerFromRange(event, func, start, end) {
+    for (let id = start + 1; id < end; id++) {
+        let day = document.getElementById(`day-${id}`);
+        day.removeEventListener(event, func);
+    }
+}
+
+function removeClassMarker(selector, className) {
+    let days = document.querySelectorAll(selector);
+    days.forEach(day => {
+        day.classList.remove(className);
     });
 }
 
@@ -154,7 +167,7 @@ function addListeners() {
                 console.log(parseInt(e.target.id.split("-")[1]));
             })
         });
-    } 
+    }
 }
 
 /**
@@ -451,6 +464,15 @@ function getPrice(dayId) {
     }
 }
 
+function totalPrice(checkinIDNum, checkoutIDNum) {
+    let total = 0;
+    for (let i = checkinIDNum; i < checkoutIDNum; i++) {
+        total += getPrice(`day-${i}`);  
+    }
+
+    return new Intl.NumberFormat('en-AU', {style: 'currency', currency: 'AUD', currencySign: 'accounting'}).format(total);
+}
+
 /**
  * Adds a class to the calendar day elements to identify 
  * in which season of the year the day falls
@@ -529,18 +551,32 @@ function CheckInNOut(dayID) {
     }
     // CASE 2 - Only CHECKIN already selected
     else if (CHECKIN.selected && !CHECKOUT.selected) {
-        // if click on a day before currently selected
+        // if click on a day before currently selected => Set new day as CHECKIN
         if (dayIDNum < CHECKIN.dayIDNum) {
-            document.getElementById(CHECKIN.dayID).classList.toggle(CHECKIN.name); //Remove previous check in
+            // Remove previous hoverInAfterCheckin handler
+            removeHandlerFromRange("mouseenter", hoverInAfterCheckin, CHECKIN.dayIDNum, lastDayNum);
+            listenerTracker = 0;
+            //Remove previous hovering marker
+            removeClassMarker(".day-date", "after-checkin");
+            // new CHECKIN
+            document.getElementById(CHECKIN.dayID).classList.toggle(CHECKIN.name);
             day.classList.toggle(CHECKIN.name); // Select day clicked as new Check in
             CHECKIN.dayID = dayID;
             CHECKIN.dayIDNum = dayIDNum;
             // Update CHECKIN output element
             document.getElementById(CHECKIN.outputEl).textContent = (getDateString(CHECKIN.dayID));
-            // TODO Make following dates mouseover sensitive
+            // Add new handler
+            addHandlerToRange("mouseenter", hoverInAfterCheckin, CHECKIN.dayIDNum, lastDayNum);
+
         }
         // if click on a day after selected CHECKIN
         else if (dayIDNum > CHECKIN.dayIDNum) { // BINGO! Means this is the check-out day
+            // Remove previous hoverInAfterCheckin handler
+            removeHandlerFromRange("mouseenter", hoverInAfterCheckin, CHECKIN.dayIDNum, lastDayNum);
+            listenerTracker = 0;
+            // Remove hovering marker from checkout date
+            day.classList.remove("after-checkin");
+            // Set CHECKOUT
             day.classList.toggle(CHECKOUT.name);
             CHECKOUT.dayID = dayID;
             CHECKOUT.dayIDNum = dayIDNum;
@@ -548,9 +584,11 @@ function CheckInNOut(dayID) {
             // Update CHECKOUT output element
             document.getElementById(CHECKOUT.outputEl).textContent = (getDateString(CHECKOUT.dayID));
             document.getElementById(CHECKOUT.outputEl).classList.add("selected");
-            // Highlight elements between the two days
             // Get number of nights and update corresponding <b></b> element in label
+            document.getElementById("nights").textContent = `${CHECKOUT.dayIDNum - CHECKIN.dayIDNum}`;
             // Calculate price and update total element box
+            document.getElementById("total").textContent = totalPrice(CHECKIN.dayIDNum, CHECKOUT.dayIDNum);
+            document.getElementById("total").classList.add("selected");
         }
         // if Clicked on the same day => reset
         else {
@@ -624,6 +662,7 @@ function CheckInNOut(dayID) {
         }
     }
 }
+
 
 /**
  *
