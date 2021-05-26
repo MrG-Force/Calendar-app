@@ -716,7 +716,10 @@ function HowManyElements(selector) {
 
 // TODO Clean functions, finish Jsdoc headers
 
-
+// TODO fix bug :
+// when checkin and checkout are both selected, clicking in selected blue days crashes the app
+// condition is:
+// When clicking in a selected days between CHECKIN and CHECKOUT
 
 
 // const controller = new AbortController();// !!!!!!!!!!!!!This did the trick 
