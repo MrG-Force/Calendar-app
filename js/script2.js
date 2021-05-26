@@ -78,7 +78,7 @@ function hoverInAfterCheckin(e) {
                 listenerTracker = i;
             }
         } else { // otherwise you moved to the left
-            for (let i = listenerTracker; i >= targetNum; i--) {
+            for (let i = listenerTracker; i > targetNum; i--) {
                 document.getElementById(`day-${i}`).classList.remove("after-checkin");
                 listenerTracker = i;
             }
@@ -89,15 +89,6 @@ function hoverInAfterCheckin(e) {
 
 }
 
-// const hoverAfterCheckIn = function (checkinIdNum, dayID) {
-//     console.log("in function 'hoverAfterCheckIn' ");
-//     let dayNum = parseInt(dayID.split("-")[1]);
-//     if (dayNum > checkinIdNum) {
-//         for (let i = checkinIdNum + 1; i <= dayNum; i++) { 
-//             document.getElementById(`day-${i}`).classList.add("after-checkin");
-//         }
-//     }
-// }
 addListeners();
 
 
@@ -152,7 +143,7 @@ function addListeners() {
     // can add an if statement 
     // if CHECKIN.selected add listeners for following days
     // until CHECKOUT.selected
-    if (!CHECKIN.selected) {
+    if (!CHECKIN.selected) { // not useful if
         let days = document.querySelectorAll(".day-date");
         days.forEach(day => {
             console.log("adding listeners");
@@ -163,18 +154,7 @@ function addListeners() {
                 console.log(parseInt(e.target.id.split("-")[1]));
             })
         });
-    } //else {
-    // document.querySelectorAll(".day-date").forEach(day => {
-    //     day.addEventListener("mouseenter", function () { hoverAfterCheckin(CHECKIN.dayIDNum, day.id) }, { signal: controller.signal });
-    //     console.log("go to sleep");
-    // });
-    // //     console.log("go to sleep");
-    // //     for (let i = CHECKIN.dayIDNum - firstDayIdNum; i < lastDayNum - firstDayIdNum; i++) {
-    // //         console.log(i+ " ...");
-    // //         days[i].addEventListener("mouseenter", function () { Chingatumadre("Chingas a tu madre") }, { signal: controller.signal });   
-    // //         // days[i].addEventListener("mouseenter", function () { hoverAfterCheckin(CHECKIN.dayIDNum, day.id) }, { signal: controller.signal });   
-    // //     }  
-    // }
+    } 
 }
 
 /**
