@@ -50,21 +50,76 @@ createNCalendars("container", numMonths, currYear, currMonth);
 var totalDays = NumberAllDays();
 var todayID = MarkToday(today);
 var lastDayID = MarkADay(firstDCurrM, todayPlus3m, "last-day");
+var lastDayNum = parseInt(lastDayID.split("-")[1]);
 markDaysOutOfRange(todayID, lastDayID, "td.day-date", "no-bookable", "day-date");
+var firstDayIdNum = lastDayNum - HowManyElements(".day-date") + 1;
 // Add the seasons for pricing
 addSeasons(".day-date");
 
-
+var listenerTracker = 0;
 // Add EventListeners
-//helperListeners() // debugging
-const controller = new AbortController();// !!!!!!!!!!!!!This did the trick 
-const hoverDaysIn = function (dayID) { document.getElementById(dayID).classList.add("hover-in") };
-const hoverDaysOut = function (dayID) { document.getElementById(dayID).classList.remove("hover-in") };
+helperListeners() // debugging
+const hoverDaysIn = function (e) { document.getElementById(e.target.id).classList.add("hover-in") };
+const hoverDaysOut = function (e) { document.getElementById(e.target.id).classList.remove("hover-in"); console.log("mouseleave") };
+function hoverInAfterCheckin(e) {
+    let targetNum = parseInt(e.target.id.split("-")[1]);
+    console.log("target number =" + targetNum);
+    if (targetNum > CHECKIN.dayIDNum) {
+        if (listenerTracker == 0) {
+            console.log("This day is after check-in");
+            // add a class to all the elements between the current and checkin
+            for (let i = CHECKIN.dayIDNum + 1; i <= targetNum; i++) {
+                document.getElementById(`day-${i}`).classList.add("after-checkin");
+                listenerTracker = i;
+            }
+        } else if (listenerTracker <= targetNum) { // if you moved right to a later date
+            for (let i = listenerTracker; i <= targetNum; i++) {
+                document.getElementById(`day-${i}`).classList.add("after-checkin");
+                listenerTracker = i;
+            }
+        } else { // otherwise you moved to the left
+            for (let i = listenerTracker; i >= targetNum; i--) {
+                document.getElementById(`day-${i}`).classList.remove("after-checkin");
+                listenerTracker = i;
+            }
+        }
+
+        console.log("listener tracker= " + listenerTracker);
+    }
+
+}
+
+// const hoverAfterCheckIn = function (checkinIdNum, dayID) {
+//     console.log("in function 'hoverAfterCheckIn' ");
+//     let dayNum = parseInt(dayID.split("-")[1]);
+//     if (dayNum > checkinIdNum) {
+//         for (let i = checkinIdNum + 1; i <= dayNum; i++) { 
+//             document.getElementById(`day-${i}`).classList.add("after-checkin");
+//         }
+//     }
+// }
 addListeners();
 
 
 
 //#region functions
+
+function removeHandler(event, func, selector) {
+    console.log("removeHandler() called...")
+    let days = document.querySelectorAll(selector);
+    days.forEach(day => {
+        console.log("in removeHandler() loop...")
+        // day.removeEventListener(event, function () { func(day.id); });
+        day.removeEventListener(event, func);
+    });
+}
+
+function addHandlerToRange(event, func, start, end) {
+    for (let id = start + 1; id < end; id++) {
+        let day = document.getElementById(`day-${id}`);
+        day.addEventListener(event, func);
+    }
+}
 
 /**
  * Calculates the difference of months between
@@ -94,12 +149,32 @@ function monthDiff(dateFrom, dateTo) {
  * 
  */
 function addListeners() {
-    let days = document.querySelectorAll(".day-date");
-    days.forEach(day => {
-        day.addEventListener("click", function () { CheckInNOut(day.id); });
-        day.addEventListener("mouseenter", function () { hoverDaysIn(day.id) }, { signal: controller.signal });
-        day.addEventListener("mouseleave", function () { hoverDaysOut(day.id) });
-    });
+    // can add an if statement 
+    // if CHECKIN.selected add listeners for following days
+    // until CHECKOUT.selected
+    if (!CHECKIN.selected) {
+        let days = document.querySelectorAll(".day-date");
+        days.forEach(day => {
+            console.log("adding listeners");
+            day.addEventListener("click", function () { CheckInNOut(day.id); });
+            day.addEventListener("mouseenter", hoverDaysIn);
+            day.addEventListener("mouseleave", hoverDaysOut);
+            day.addEventListener("mouseenter", function (e) {
+                console.log(parseInt(e.target.id.split("-")[1]));
+            })
+        });
+    } //else {
+    // document.querySelectorAll(".day-date").forEach(day => {
+    //     day.addEventListener("mouseenter", function () { hoverAfterCheckin(CHECKIN.dayIDNum, day.id) }, { signal: controller.signal });
+    //     console.log("go to sleep");
+    // });
+    // //     console.log("go to sleep");
+    // //     for (let i = CHECKIN.dayIDNum - firstDayIdNum; i < lastDayNum - firstDayIdNum; i++) {
+    // //         console.log(i+ " ...");
+    // //         days[i].addEventListener("mouseenter", function () { Chingatumadre("Chingas a tu madre") }, { signal: controller.signal });   
+    // //         // days[i].addEventListener("mouseenter", function () { hoverAfterCheckin(CHECKIN.dayIDNum, day.id) }, { signal: controller.signal });   
+    // //     }  
+    // }
 }
 
 /**
@@ -267,7 +342,7 @@ function createNCalendars(container, months, startYear, startMonth) {
  * 'day-32'
  */
 function NumberAllDays() {
-    let days = document.querySelectorAll("td.day-date"); // can be a constant string to name days
+    let days = document.querySelectorAll(".day-date"); // can be a constant string to name days
     for (let i = 0; i < days.length; i++) {
         days[i].id = `day-${i + 1}`;
     }
@@ -465,9 +540,12 @@ function CheckInNOut(dayID) {
         document.getElementById(CHECKIN.outputEl).textContent = (getDateString(CHECKIN.dayID));
         document.getElementById(CHECKIN.outputEl).classList.add("selected");
         // Remove highlighter on hover handler
-        controller.abort();
+        removeHandler("mouseenter", hoverDaysIn, ".day-date");
+        removeHandler("mouseleave", hoverDaysOut, ".day-date");
+        document.getElementById(CHECKIN.dayID).classList.remove("hover-in");
         // TODO Make following dates mouseover sensitive
-
+        // Add an event listener on all the day elements after checkin
+        addHandlerToRange("mouseenter", hoverInAfterCheckin, CHECKIN.dayIDNum, lastDayNum);
     }
     // CASE 2 - Only CHECKIN already selected
     else if (CHECKIN.selected && !CHECKOUT.selected) {
@@ -565,19 +643,10 @@ function CheckInNOut(dayID) {
             document.getElementById(CHECKOUT.outputEl).classList.remove("selected");
         }
     }
-    // console.log(checkInSelected);
-    //checkInSelected ? checkInSelected = false : 
 }
 
-// function hoverDaysIn(dayID) {
-//     document.getElementById(dayID).classList.add("hover-in");
-// }
-
-// function hoverDaysOut(dayID) {
-//     document.getElementById(dayID).classList.remove("hover-in");
-// }
 /**
- * @deprecated
+ *
  * Gets all the elements in the document with the given
  * selector and returns the count.
  * 
@@ -593,14 +662,14 @@ function HowManyElements(selector) {
 
 
 
-//NOT WORKING
-function removeHandler(event, func, selector) {
-    console.log("removeHandler() called...")
-    let days = document.querySelectorAll(selector);
-    days.forEach(day => {
-        console.log("in removeHandler() loop...")
-        // day.removeEventListener(event, function () { func(day.id); });
-        day.removeEventListener(event, func);
-    });
-    //removeHandler("mouseenter", hoverDaysIn, "td.day-date");
-}
+//WORKING
+
+
+
+
+// const controller = new AbortController();// !!!!!!!!!!!!!This did the trick 
+// adding this controller to the listener:
+// day.addEventListener("mouseenter", hoverDaysIn, { signal: controller.signal });
+// then calling it when needed:
+// controller.abort();
+// problem was I couldn't add the listener again, apparently the controllers gets registered and lingers
