@@ -23,6 +23,7 @@ const HIGH = Object.freeze({
 const CHECKIN = { dayID: "", dayIDNum: 0, selected: false, name: "check-in-day", domstring: ".check-in-day", outputEl: "check-in" };
 const CHECKOUT = { dayID: "", dayIDNum: 0, selected: false, name: "check-out-day", domstring: ".check-out-day", outputEl: "check-out" };
 const DatePHolder = "Mmm dd, yyyy";
+const TotalPholder = "$0.00"
 
 // ---------TIME DATA ---------
 const msxDay = 86400000; // milliseconds per day
@@ -62,6 +63,7 @@ helperListeners() // debugging
 //TODO convert into normal functions and move to functions in a subregion Listeners functions
 const hoverDaysIn = function (e) { document.getElementById(e.target.id).classList.add("hover-in") };
 const hoverDaysOut = function (e) { document.getElementById(e.target.id).classList.remove("hover-in"); console.log("mouseleave") };
+
 function hoverInAfterCheckin(e) {
     let targetNum = parseInt(e.target.id.split("-")[1]);
     console.log("target number =" + targetNum);
@@ -90,7 +92,7 @@ function hoverInAfterCheckin(e) {
 }
 
 addListeners();
-
+addHoveringListeners();
 
 
 //#region functions
@@ -153,21 +155,22 @@ function monthDiff(dateFrom, dateTo) {
  * 
  */
 function addListeners() {
-    // can add an if statement 
-    // if CHECKIN.selected add listeners for following days
-    // until CHECKOUT.selected
-    if (!CHECKIN.selected) { // not useful if
-        let days = document.querySelectorAll(".day-date");
-        days.forEach(day => {
-            console.log("adding listeners");
-            day.addEventListener("click", function () { CheckInNOut(day.id); });
-            day.addEventListener("mouseenter", hoverDaysIn);
-            day.addEventListener("mouseleave", hoverDaysOut);
-            day.addEventListener("mouseenter", function (e) {
-                console.log(parseInt(e.target.id.split("-")[1]));
-            })
-        });
-    }
+    let days = document.querySelectorAll(".day-date");
+    days.forEach(day => {
+        console.log("adding listeners");
+        day.addEventListener("click", function () { CheckInNOut(day.id); });
+    });
+}
+
+/**
+ * 
+ */
+function addHoveringListeners() {
+    let days = document.querySelectorAll(".day-date");
+    days.forEach(day => {
+        day.addEventListener("mouseenter", hoverDaysIn);
+        day.addEventListener("mouseleave", hoverDaysOut);
+    });
 }
 
 /**
@@ -401,21 +404,15 @@ function markDaysOutOfRange(day1ID, day2ID, selector, newClass, oldClass = undef
  * Adds a passed class name to a group of day elements
  * that fall inside a given time range.
  * 
- * @param {string} day1ID - Earliest day element id in format "day-8"
- * @param {string} day2ID - Latest day element id 
- * @param {string} selector - A DOMString containing one or more selectors to match against
+ * @param {number} day1IDNum - Earliest day element id in format "day-8"
+ * @param {number} day2IDNum - Latest day element id 
  * @param {string} className - The name of the class to be assigned
  */
-function markDaysInRange(day1ID, day2ID, selector, className) {
-    let firstDayNum = parseInt(day1ID.split("-")[1]);
-    let lastDayNum = parseInt(day2ID.split("-")[1]);
-    let days = document.querySelectorAll(selector);
-    days.forEach(dayEl => {
-        let elNum = parseInt(dayEl.id.split("-")[1]);
-        if (elNum > firstDayNum || elNum < lastDayNum) {
-            dayEl.classList.add(className); // consider toggle***************
-        }
-    });
+function markDaysInRange(day1IDNum, day2IDNum, className) {
+    for (let day = day1IDNum + 1; day < day2IDNum; day++) {
+        let dayID = `day-${day}`;
+        document.getElementById(dayID).classList.add(className);
+    }
 }
 
 /**
@@ -467,10 +464,10 @@ function getPrice(dayId) {
 function totalPrice(checkinIDNum, checkoutIDNum) {
     let total = 0;
     for (let i = checkinIDNum; i < checkoutIDNum; i++) {
-        total += getPrice(`day-${i}`);  
+        total += getPrice(`day-${i}`);
     }
 
-    return new Intl.NumberFormat('en-AU', {style: 'currency', currency: 'AUD', currencySign: 'accounting'}).format(total);
+    return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', currencySign: 'accounting' }).format(total);
 }
 
 /**
@@ -567,7 +564,6 @@ function CheckInNOut(dayID) {
             document.getElementById(CHECKIN.outputEl).textContent = (getDateString(CHECKIN.dayID));
             // Add new handler
             addHandlerToRange("mouseenter", hoverInAfterCheckin, CHECKIN.dayIDNum, lastDayNum);
-
         }
         // if click on a day after selected CHECKIN
         else if (dayIDNum > CHECKIN.dayIDNum) { // BINGO! Means this is the check-out day
@@ -592,6 +588,12 @@ function CheckInNOut(dayID) {
         }
         // if Clicked on the same day => reset
         else {
+            // Remove previous hoverInAfterCheckin handler
+            removeHandlerFromRange("mouseenter", hoverInAfterCheckin, CHECKIN.dayIDNum, lastDayNum);
+            listenerTracker = 0;
+            //Remove previous hovering markers
+            removeClassMarker(".day-date", "after-checkin");
+            // Update Checkin element to not selected
             day.classList.toggle(CHECKIN.name);
             CHECKIN.dayID = "";
             CHECKIN.dayIDNum = 0;
@@ -599,6 +601,8 @@ function CheckInNOut(dayID) {
             // Update CHECKIN output element
             document.getElementById(CHECKIN.outputEl).textContent = DatePHolder;
             document.getElementById(CHECKIN.outputEl).classList.remove("selected");
+            // Reload the event handlers for hovering
+            addHoveringListeners();
         }
     }
     // CASE 3 - CHECKIN & CHECKOUT selected
@@ -612,8 +616,12 @@ function CheckInNOut(dayID) {
             // Update CHECKOUT output element
             document.getElementById(CHECKOUT.outputEl).textContent = (getDateString(CHECKOUT.dayID));
             // Highlight elements between the two days
+            markDaysInRange(CHECKIN.dayIDNum, CHECKOUT.dayIDNum, "after-checkin");
             // Get number of nights and update corresponding <b></b> element in label
+            document.getElementById("nights").textContent = `${CHECKOUT.dayIDNum - CHECKIN.dayIDNum}`;
             // Calculate price and update total element box
+            document.getElementById("total").textContent = totalPrice(CHECKIN.dayIDNum, CHECKOUT.dayIDNum);
+            document.getElementById("total").classList.add("selected");
         }
         // if click before check in, set new check in, erase check out
         else if (dayIDNum < CHECKIN.dayIDNum) {
@@ -632,6 +640,15 @@ function CheckInNOut(dayID) {
             // Update CHECKOUT output element
             document.getElementById(CHECKOUT.outputEl).textContent = DatePHolder;
             document.getElementById(CHECKOUT.outputEl).classList.remove("selected");
+            // Update nights in <b></b> element in label
+            document.getElementById("nights").textContent = "";
+            // Update TOTAL 
+            document.getElementById("total").textContent = TotalPholder;
+            document.getElementById("total").classList.remove("selected");
+            // Remove previously selected days
+            removeClassMarker(".day-date", "after-checkin");
+            // Reload the event handlers for hovering
+            addHandlerToRange("mouseenter", hoverInAfterCheckin, CHECKIN.dayIDNum, lastDayNum);
         }
         // if click on an already selected check out date, erase check out
         else if (dayIDNum == CHECKOUT.dayIDNum) {
@@ -642,6 +659,15 @@ function CheckInNOut(dayID) {
             // Update CHECKOUT output element
             document.getElementById(CHECKOUT.outputEl).textContent = DatePHolder;
             document.getElementById(CHECKOUT.outputEl).classList.remove("selected");
+            // Update nights in <b></b> element in label
+            document.getElementById("nights").textContent = "";
+            // Update TOTAL 
+            document.getElementById("total").textContent = TotalPholder;
+            document.getElementById("total").classList.remove("selected");
+            // Remove previously selected days
+            removeClassMarker(".day-date", "after-checkin");
+            // Reload the event handlers for hovering
+            addHandlerToRange("mouseenter", hoverInAfterCheckin, CHECKIN.dayIDNum, lastDayNum);
         }
         // if click in already selected check in => reset all
         else {
@@ -659,6 +685,15 @@ function CheckInNOut(dayID) {
             CHECKOUT.selected = false;
             document.getElementById(CHECKOUT.outputEl).textContent = DatePHolder;
             document.getElementById(CHECKOUT.outputEl).classList.remove("selected");
+             // Update nights in <b></b> element in label
+             document.getElementById("nights").textContent = "";
+             // Update TOTAL 
+             document.getElementById("total").textContent = TotalPholder;
+             document.getElementById("total").classList.remove("selected");
+            // Remove previously selected days
+            removeClassMarker(".day-date", "after-checkin");
+            // Reload the event handlers for hovering
+            addHoveringListeners();
         }
     }
 }
@@ -679,9 +714,7 @@ function HowManyElements(selector) {
 
 //#endregion
 
-
-
-//WORKING
+// TODO Clean functions, finish Jsdoc headers
 
 
 

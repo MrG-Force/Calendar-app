@@ -64,7 +64,6 @@
             margin: 8px 3px 0px 1px;
             padding-left: 3px;
             color: grey;
-            border: double blue;
         }
 
         #display-area {
@@ -81,9 +80,9 @@
             margin: 10px 3px 0px 10px
         }
 
-        .selected{
+        /* .selected{
             color: black;
-        }
+        } */
         
         .before-checkin {
             pointer-events: none;
@@ -91,10 +90,27 @@
         .after-checkin {
             background-color: rgba(30, 144, 255, 0.5);
         }
-
-        /* #check-out {} */
-
-        /* #total {} */
+        #check-in {
+            border: double darkturquoise;
+        }
+        #check-in.selected {
+            background-color: rgba(0, 206, 209, 0.4);
+            color:black;
+        }
+        #check-out {
+            border: double salmon;
+        }
+        #check-out.selected {
+            background-color:rgba(250, 128, 114, 0.5);
+            color:black;
+        }
+        #total {
+            border: double rgba(30, 144, 255, 0.8);
+        }
+        #total.selected {
+            background-color:rgba(30, 144, 255, 0.4);
+            color: black;
+        }
     </style>
 </head>
 
