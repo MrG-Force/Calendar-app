@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar app</title>
+    <style>
+        #container {
+            display: flex;
+            border: solid;
+            justify-content: space-around;
+            padding-top: 1%;
+            padding-bottom: 1%;
+        }
+
+        .month {
+            border: solid 1px brown;
+        }
+
+        .day-date {
+            border-radius: 3px;
+            cursor: pointer;
+            user-select: none;
+            -moz-user-select: none;
+            -webkit-user-select: none;
+        }
+        .hover-in {
+            box-shadow: 0px 0px 10px 3px rgb(70, 130, 180);
+        }
+
+        .today {
+            border: solid 3px rgba(0, 128, 0, 0.7);
+        }
+
+        .last-day {
+            border: solid 3px rgba(255, 0, 0, 0.7);
+            /* box-shadow:2px 2px 2px 2px rgba(255, 0, 0, 0.8); */
+        }
+
+        .no-bookable {
+            background-color: grey;
+            color: whitesmoke;
+            pointer-events: none;
+        }
+
+        .check-in-day {
+            background-color: darkturquoise;
+        }
+        .check-out-day {
+            background-color:salmon;
+        }
+        .output-cont {
+            /* border: thin solid purple; */
+            display: flex;
+            flex-wrap: wrap;
+            height: 100px;
+            width: 33%;
+        }
+        .output-box {
+            width: 150px;
+            height: 21px;
+            margin: 8px 3px 0px 1px;
+            padding-left: 3px;
+            color: grey;
+        }
+
+        #display-area {
+            /* border: thin solid red; */
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            width: 90%;
+            height: 200px;
+        }
+
+        label {
+            float: left;
+            margin: 10px 3px 0px 10px
+        }
+
+        /* .selected{
+            color: black;
+        } */
+        
+        .before-checkin {
+            pointer-events: none;
+        }
+        .after-checkin {
+            background-color: rgba(30, 144, 255, 0.5);
+        }
+        #check-in {
+            border: double darkturquoise;
+        }
+        #check-in.selected {
+            background-color: rgba(0, 206, 209, 0.4);
+            color:black;
+        }
+        #check-out {
+            border: double salmon;
+        }
+        #check-out.selected {
+            background-color:rgba(250, 128, 114, 0.5);
+            color:black;
+        }
+        #total {
+            border: double rgba(30, 144, 255, 0.8);
+        }
+        #total.selected {
+            background-color:rgba(30, 144, 255, 0.4);
+            color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Please select your dates:</h1>
+    <div id="container">
+    </div>
+    <div id="display-area">
+        <div class="output-cont">
+            <label for="check-in">Check in:</label>
+            <div id="check-in" class="output-box">Mmm dd, yyyy</div>
+        </div>
+        <div class="output-cont"><label for="check-out">Check out:</label>
+            <div id="check-out" class="output-box">Mmm dd, yyyy</div>
+        </div>
+        <div class="output-cont"><label for="total" id="label-total">Total for <b id="nights"></b> nights:</label>
+            <div id="total" class="output-box">$0.00</div>
+        </div>
+    </div>
+
+    <script src="js/script2.js"></script>
+</body>
+
+</html>
