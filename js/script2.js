@@ -529,7 +529,8 @@ function elementsContain(classToSearch, selector) {
 function CheckInNOut(dayID) {
     let day = document.getElementById(dayID);
     let dayIDNum = parseInt(dayID.split("-")[1]);
-    // CASE 1 - Nothing is selected
+
+//CASE 1 - Nothing is selected 
     if (!CHECKIN.selected) {
         day.classList.toggle(CHECKIN.name);
         CHECKIN.dayID = dayID;
@@ -546,7 +547,7 @@ function CheckInNOut(dayID) {
         // Add an event listener on all the day elements after checkin
         addHandlerToRange("mouseenter", hoverInAfterCheckin, CHECKIN.dayIDNum, lastDayNum);
     }
-    // CASE 2 - Only CHECKIN already selected
+//CASE 2 - Only CHECKIN already selected 
     else if (CHECKIN.selected && !CHECKOUT.selected) {
         // if click on a day before currently selected => Set new day as CHECKIN
         if (dayIDNum < CHECKIN.dayIDNum) {
@@ -577,6 +578,8 @@ function CheckInNOut(dayID) {
             CHECKOUT.dayID = dayID;
             CHECKOUT.dayIDNum = dayIDNum;
             CHECKOUT.selected = true;
+            // Highlight elements between the two days (bug fix)
+            markDaysInRange(CHECKIN.dayIDNum, CHECKOUT.dayIDNum, "after-checkin");
             // Update CHECKOUT output element
             document.getElementById(CHECKOUT.outputEl).textContent = (getDateString(CHECKOUT.dayID));
             document.getElementById(CHECKOUT.outputEl).classList.add("selected");
@@ -605,7 +608,7 @@ function CheckInNOut(dayID) {
             addHoveringListeners();
         }
     }
-    // CASE 3 - CHECKIN & CHECKOUT selected
+//CASE 3 - CHECKIN & CHECKOUT selected
     else if (CHECKIN.selected && CHECKOUT.selected) {
         // if click on a different day later than Check in => new Check out
         if ((dayIDNum > CHECKIN.dayIDNum) && (dayIDNum != CHECKOUT.dayIDNum)) {
@@ -722,6 +725,10 @@ function HowManyElements(selector) {
 // When clicking already selected checkout the dates selected get erased, 
 //thats ok, but then if the same is clicked without moving the mouse, 
 //the days get selected but the days are not selected again;
+
+// TODO:
+// When hovering after checkin is selected, add a red shadow as the one before
+// the checkin is selected
 
 // const controller = new AbortController();// !!!!!!!!!!!!!This did the trick 
 // adding this controller to the listener:
