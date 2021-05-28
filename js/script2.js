@@ -615,6 +615,8 @@ function CheckInNOut(dayID) {
             CHECKOUT.dayIDNum = dayIDNum;
             // Update CHECKOUT output element
             document.getElementById(CHECKOUT.outputEl).textContent = (getDateString(CHECKOUT.dayID));
+            // Remove previous selection
+            removeClassMarker(".day-date", "after-checkin");
             // Highlight elements between the two days
             markDaysInRange(CHECKIN.dayIDNum, CHECKOUT.dayIDNum, "after-checkin");
             // Get number of nights and update corresponding <b></b> element in label
