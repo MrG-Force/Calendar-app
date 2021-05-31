@@ -1,3 +1,13 @@
+/**
+ * @file Creates a set of consecutive monthly calendars that allow the user to select 
+ * booking dates and calculates the price for the accommodation depending of the season-pricing
+ * policy. Each months is contained in a table element. The amount of calendars depends
+ * on the current date. The program is designed to fit 3 months, so depending on the current date it
+ * may generate 3 to 5 calendars.
+ * @author Guillermo Ortiz
+ * @version 1.1
+ */
+
 //#region ********** CONSTANTS AND VARIABLES **********
 // ---------- SEASON OBJECTS ----------
 const LOW = Object.freeze({
@@ -60,13 +70,15 @@ var firstDayIdNum = lastDayNum - HowManyElements(".day-date") + 1;
 // Add the seasons for pricing
 addSeasons(".day-date");
 
-// Add EventListeners
+//--------- EVENT LISTENERS ---------
 var listenerTracker = 0;
 addListeners();
 addHoveringListeners();
 //#endregion
 
 //#region ********** EVENT LISTENERS FUNCTIONS **********
+// These functions work together to add Event handlers to the main
+// calendar dates selection function
 
 /**
  * Adds the "hover-in" class to the target element in the event.
@@ -84,6 +96,26 @@ addHoveringListeners();
  */
 function hoverDaysOut(e) {
     document.getElementById(e.target.id).classList.remove("hover-in");
+}
+
+/**
+ * Adds the "hover-out" class to highlight possible checkout days
+ * to change already selected checkout
+ * 
+@param {event} e - An object event.
+ */
+function addHoverDaysAfterChOut(e) {
+    document.getElementById(e.target.id).classList.add("hover-out");
+}
+
+/**
+ * Removes the "hover-out" class to highlight possible checkout days
+ * to change already selected checkout
+ * 
+@param {event} e - An object event.
+ */
+function removeHoverDaysAfterChOut(e) {
+    document.getElementById(e.target.id).classList.remove("hover-out");
 }
 
 /**
@@ -511,8 +543,10 @@ function removeHandler(event, func, selector) {
         document.getElementById(CHECKIN.outputEl).textContent = (getDateString(CHECKIN.dayID));
         document.getElementById(CHECKIN.outputEl).classList.add("selected");
         // Remove highlighter on hover handler
-        removeHandler("mouseenter", hoverDaysIn, ".day-date");
-        removeHandler("mouseleave", hoverDaysOut, ".day-date");
+        removeHandlerFromRange("mouseenter", hoverDaysIn, CHECKIN.dayIDNum - 1, lastDayNum);
+        removeHandlerFromRange("mouseleave", hoverDaysOut, CHECKIN.dayIDNum - 1, lastDayNum);
+        // removeHandler("mouseenter", hoverDaysIn, ".day-date");
+        // removeHandler("mouseleave", hoverDaysOut, ".day-date");
         document.getElementById(CHECKIN.dayID).classList.remove("hover-in");
         // TODO Make following dates mouseover sensitive
         // Add an event listener on all the day elements after checkin
@@ -534,7 +568,9 @@ function removeHandler(event, func, selector) {
             CHECKIN.dayIDNum = dayIDNum;
             // Update CHECKIN output element
             document.getElementById(CHECKIN.outputEl).textContent = (getDateString(CHECKIN.dayID));
-            // Add new handler
+            // Add new handlers
+            removeHandlerFromRange("mouseenter", hoverDaysIn, CHECKIN.dayIDNum - 1, lastDayNum);
+            removeHandlerFromRange("mouseleave", hoverDaysOut, CHECKIN.dayIDNum - 1, lastDayNum);
             addHandlerToRange("mouseenter", hoverInAfterCheckin, CHECKIN.dayIDNum, lastDayNum);
         }
         // if click on a day after selected CHECKIN
@@ -559,6 +595,9 @@ function removeHandler(event, func, selector) {
             // Calculate price and update total element box
             document.getElementById("total").textContent = totalPrice(CHECKIN.dayIDNum, CHECKOUT.dayIDNum);
             document.getElementById("total").classList.add("selected");
+            // Add after checkout hovering marker
+            addHandlerToRange("mouseenter", addHoverDaysAfterChOut, CHECKOUT.dayIDNum, lastDayNum);
+            addHandlerToRange("mouseleave", removeHoverDaysAfterChOut, CHECKOUT.dayIDNum, lastDayNum);
         }
         // if Clicked on the same day => reset
         else {
@@ -585,6 +624,10 @@ function removeHandler(event, func, selector) {
         if ((dayIDNum > CHECKIN.dayIDNum) && (dayIDNum != CHECKOUT.dayIDNum)) {
             document.getElementById(CHECKOUT.dayID).classList.toggle(CHECKOUT.name); // Remove previous check out
             day.classList.toggle(CHECKOUT.name);
+            // Remove previous listeners after checkout hovering marker
+            removeHandlerFromRange("mouseenter", addHoverDaysAfterChOut, CHECKOUT.dayIDNum, lastDayNum);
+            // removeHandlerFromRange("mouseleave", removeHoverDaysAfterChOut, CHECKOUT.dayIDNum, lastDayNum);
+            // Update CHECKOUT
             CHECKOUT.dayID = dayID;
             CHECKOUT.dayIDNum = dayIDNum;
             // Update CHECKOUT output element
@@ -598,6 +641,9 @@ function removeHandler(event, func, selector) {
             // Calculate price and update total element box
             document.getElementById("total").textContent = totalPrice(CHECKIN.dayIDNum, CHECKOUT.dayIDNum);
             document.getElementById("total").classList.add("selected");
+            // Add new listeners after checkout hovering marker
+            addHandlerToRange("mouseenter", addHoverDaysAfterChOut, CHECKOUT.dayIDNum, lastDayNum);
+            addHandlerToRange("mouseleave", removeHoverDaysAfterChOut, CHECKOUT.dayIDNum, lastDayNum);
         }
         // if click before check in, set new check in, erase check out
         else if (dayIDNum < CHECKIN.dayIDNum) {
@@ -609,6 +655,8 @@ function removeHandler(event, func, selector) {
             // Update CHECKIN output elements
             document.getElementById(CHECKIN.outputEl).textContent = (getDateString(CHECKIN.dayID));
             // CHECKOUT element
+            // Remove previous listeners after checkout hovering marker
+            removeHandlerFromRange("mouseenter", addHoverDaysAfterChOut, CHECKOUT.dayIDNum, lastDayNum);
             document.getElementById(CHECKOUT.dayID).classList.toggle(CHECKOUT.name);
             CHECKOUT.dayID = "";
             CHECKOUT.dayIDNum = 0;
@@ -624,11 +672,15 @@ function removeHandler(event, func, selector) {
             // Remove previously selected days
             removeClassMarker(".day-date", "after-checkin");
             // Reload the event handlers for hovering
+            removeHandlerFromRange("mouseenter", hoverDaysIn, CHECKIN.dayIDNum - 1, lastDayNum);
+            removeHandlerFromRange("mouseenter", hoverDaysOut, CHECKIN.dayIDNum - 1, lastDayNum);
             addHandlerToRange("mouseenter", hoverInAfterCheckin, CHECKIN.dayIDNum, lastDayNum);
         }
         // if click on an already selected check out date, erase check out
         else if (dayIDNum == CHECKOUT.dayIDNum) {
             day.classList.toggle(CHECKOUT.name);
+            // Remove previous listeners after checkout hovering marker
+            removeHandlerFromRange("mouseenter", addHoverDaysAfterChOut, CHECKOUT.dayIDNum, lastDayNum);
             CHECKOUT.dayID = "";
             CHECKOUT.dayIDNum = 0;
             CHECKOUT.selected = false;
@@ -655,6 +707,8 @@ function removeHandler(event, func, selector) {
             document.getElementById(CHECKIN.outputEl).textContent = DatePHolder;
             document.getElementById(CHECKIN.outputEl).classList.remove("selected");
             // CHECKOUT element
+            // Remove previous listeners after checkout hovering marker
+            removeHandlerFromRange("mouseenter", addHoverDaysAfterChOut, CHECKOUT.dayIDNum, lastDayNum);
             document.getElementById(CHECKOUT.dayID).classList.toggle(CHECKOUT.name);
             CHECKOUT.dayID = "";
             CHECKOUT.dayIDNum = 0;
@@ -788,16 +842,3 @@ function removeClassMarker(selector, className) {
 // }
 
 //#endregion
-
-// TODO:
-// When hovering after checkin is selected, add a salmon shadow as the one before
-// the checkin is selected
-
-
-
-// const controller = new AbortController();// !!!!!!!!!!!!!This did the trick 
-// adding this controller to the listener:
-// day.addEventListener("mouseenter", hoverDaysIn, { signal: controller.signal });
-// then calling it when needed:
-// controller.abort();
-// problem was I couldn't add the listener again, apparently the controllers gets registered and lingers
