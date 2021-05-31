@@ -415,17 +415,7 @@ function markDaysInRange(day1IDNum, day2IDNum, className) {
     }
 }
 
-/**
- * Adds a specified class name to the day with
- * the passed id.
- * 
- * @param {string} dayID - Day element id in format "day-8"
- * @param {string} className - The name of the class to be assigned
- */
-function daySelect(dayID, className) {
-    let day = document.getElementById(dayID);
-    day.classList.toggle(className);
-}
+
 
 /**
  * Creates a valid date string for a given day-id that 
@@ -492,31 +482,6 @@ function addSeasons(dayClassName) {
             day.classList.add(HIGH.name);
         }
     });
-}
-
-/**
- * Finds out if a given class name exists in a group of
- * elements with the passed CSS selector
- * 
- * @param {string} classToSearch - The name of the class to search as a string
- * @param {string} selector - A DOMString.  Must be a valid CSS selector string:
- * @returns {boolean}
- * 
- * @example 
- * Does the class name "HIGH" exists in at least one of the 
- * elements with a class ".day-date":
- * 
- * elementsContain("HIGH", ".day-date");
- * 
- */
-function elementsContain(classToSearch, selector) {
-    let elements = document.querySelectorAll(selector);
-    for (let i = 0; i < elements.length; i++) {
-        if (elements[i].classList.contains(classToSearch)) {
-            return true;
-        }
-    }
-    return false;
 }
 
 /**
@@ -703,13 +668,12 @@ function CheckInNOut(dayID) {
     }
 }
 
-
 /**
  *
  * Gets all the elements in the document with the given
  * selector and returns the count.
  * 
- * @param {string} selector - A DOMString containing one selector
+ * @param {string} selector - A valid CSS selector
  * @returns {number} 
  */
 function HowManyElements(selector) {
@@ -718,6 +682,8 @@ function HowManyElements(selector) {
 }
 
 //#endregion
+
+
 
 // TODO Clean functions, finish Jsdoc headers
 
