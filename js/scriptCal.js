@@ -1,3 +1,4 @@
+//#region ********** CONSTANTS AND VARIABLES **********
 // ---------- SEASON OBJECTS ----------
 const LOW = Object.freeze({
     name: "LOW",
@@ -41,7 +42,9 @@ var todayPlus3m = new Date(currYear, currMonth + 3, currDay);
 // Number of calendars to create
 var numMonths = monthDiff(today, todayPlus3m);
 var numValidDays = (todayPlus3m - today) / msxDay;
+//#endregion
 
+//#region ********** CALENDARS BUILDER ***********
 // --------- CREATE CALENDAR TABLES ---------
 // Depending of the current date the number of months calculated 
 //to hold the 3 month can vary: from 3 up to 5 calendars can be created
@@ -57,19 +60,43 @@ var firstDayIdNum = lastDayNum - HowManyElements(".day-date") + 1;
 // Add the seasons for pricing
 addSeasons(".day-date");
 
-var listenerTracker = 0;
 // Add EventListeners
-helperListeners() // debugging
-//TODO convert into normal functions and move to functions in a subregion Listeners functions
-const hoverDaysIn = function (e) { document.getElementById(e.target.id).classList.add("hover-in") };
-const hoverDaysOut = function (e) { document.getElementById(e.target.id).classList.remove("hover-in"); console.log("mouseleave") };
+var listenerTracker = 0;
+addListeners();
+addHoveringListeners();
+//#endregion
 
+//#region ********** EVENT LISTENERS FUNCTIONS **********
+
+/**
+ * Adds the "hover-in" class to the target element in the event.
+ * 
+ * @param {event} e - An object event.
+ */
+ function hoverDaysIn(e) {
+    document.getElementById(e.target.id).classList.add("hover-in");
+}
+
+/**
+ * Removes the "hover-in" class to the target element in the event
+ * 
+ * @param {event} e - An object event.
+ */
+function hoverDaysOut(e) {
+    document.getElementById(e.target.id).classList.remove("hover-in");
+}
+
+/**
+ * Toggles the class "after-checkin" in the event targeted element.
+ * This functions tracks the mouse movements while hovering over 
+ * the days after the selected check-in day, by highlighting those days.
+ * 
+ * @param {event} e - An object event
+ */
 function hoverInAfterCheckin(e) {
     let targetNum = parseInt(e.target.id.split("-")[1]);
-    console.log("target number =" + targetNum);
     if (targetNum > CHECKIN.dayIDNum) {
         if (listenerTracker == 0) {
-            console.log("This day is after check-in"); // --------------debug
             // add a class to all the elements between the current and checkin
             for (let i = CHECKIN.dayIDNum + 1; i <= targetNum; i++) {
                 document.getElementById(`day-${i}`).classList.add("after-checkin");
@@ -86,40 +113,25 @@ function hoverInAfterCheckin(e) {
                 listenerTracker = i;
             }
         }
-        console.log("listener tracker= " + listenerTracker); // --------------debug
     }
 
 }
 
-addListeners();
-addHoveringListeners();
-
-
-//#region functions
-
-function removeHandler(event, func, selector) {
-    console.log("removeHandler() called...")
-    let days = document.querySelectorAll(selector);
-    days.forEach(day => {
-        console.log("in removeHandler() loop...")
-        day.removeEventListener(event, func);
-    });
-}
-
-function removeHandlerFromRange(event, func, start, end) {
-    for (let id = start + 1; id < end; id++) {
-        let day = document.getElementById(`day-${id}`);
-        day.removeEventListener(event, func);
-    }
-}
-
-function removeClassMarker(selector, className) {
-    let days = document.querySelectorAll(selector);
-    days.forEach(day => {
-        day.classList.remove(className);
-    });
-}
-
+/**
+ * Adds an event listener to run the given function 
+ * in the days within the given range
+ * 
+ * @param {string} event - the name of the event as a string, e.g. "mouseenter"
+ * @param {function} func - the function to handle the event
+ * @param {number} start - the number of the first day in range
+ * @param {number} end - the number of the last day in the range
+ * 
+ * @example - All days in the calendar have an id in the format "day-<number>".
+ * This function uses the number part as number, not string:
+ * addHandlerToRange("mouseenter", hoverInAfterCheckin, 34, 38); 
+ * Will  add a listener to run the function when the mouse enters 
+ * the element for the days 35, 36 and 37.
+ */
 function addHandlerToRange(event, func, start, end) {
     for (let id = start + 1; id < end; id++) {
         let day = document.getElementById(`day-${id}`);
@@ -128,64 +140,59 @@ function addHandlerToRange(event, func, start, end) {
 }
 
 /**
- * Calculates the difference of months between
- * two dates without considering the days
+ * Removes an event listener from the days within the given range 
  * 
- * @param {Date} dateFrom - Date object for the earliest date
- * @param {Date} dateTo - Date object for the latest date
- * @returns {number} - Months difference between two dates
- * 
- * @example - Even though there are a few days difference between
- * this two dates, the function will return 1 because they
- * are in different months:
- * 
- *  let d1 = new Date(2021, 4, 31);
- *  let d2 = new Date(2021, 5, 1);
- *  console.log(monthDiff(d1,d2));
- *  >> 1
+ * @param {string} event - the name of the event as a string, e.g. "mouseenter"
+ * @param {function} func - the function to handle the event
+ * @param {number} start - the number of the first day in range
+ * @param {number} end - the number of the last day in the range
  */
-function monthDiff(dateFrom, dateTo) {
-    let months = dateTo.getMonth() - dateFrom.getMonth();
-    // year difference adjustment
-    // if the dates are in different years add 12 months per year difference
-    months += 12 * (dateTo.getFullYear() - dateFrom.getFullYear());
-    return months;
+function removeHandlerFromRange(event, func, start, end) {
+    for (let id = start + 1; id < end; id++) {
+        let day = document.getElementById(`day-${id}`);
+        day.removeEventListener(event, func);
+    }
 }
+
 /**
+ * Removes an event listener from the days with the given class name
  * 
+ @param {string} event - the name of the event as a string, e.g. "mouseenter"
+ * @param {function} func - the function to handle the event
+ * @param {string} selector - A valid CSS selector
  */
-function addListeners() {
+function removeHandler(event, func, selector) {
+    let days = document.querySelectorAll(selector);
+    days.forEach(day => {
+        day.removeEventListener(event, func);
+    });
+}
+
+/**
+ * Adds event listeners to all valid days in the calendars.
+ * The event is a "click" on a "day-date" element and will
+ * run the check-in ann out functionality.
+ */
+ function addListeners() {
     let days = document.querySelectorAll(".day-date");
     days.forEach(day => {
-        console.log("adding listeners");
         day.addEventListener("click", function () { CheckInNOut(day.id); });
     });
 }
 
 /**
- * 
+ * Adds a hovering effect when the mouse enters or leaves a day element
  */
-function addHoveringListeners() {
+ function addHoveringListeners() {
     let days = document.querySelectorAll(".day-date");
     days.forEach(day => {
         day.addEventListener("mouseenter", hoverDaysIn);
         day.addEventListener("mouseleave", hoverDaysOut);
     });
 }
+//#endregion
 
-/**
- * Adds event listeners to day elements in the calendar
- */
-function helperListeners() {
-    let days = document.querySelectorAll("td.day-date");
-    days.forEach(day => {
-        //day.addEventListener("click", function () { daySelect(day.id, "selected-day"); });
-        //day.addEventListener("mouseover", function () { daySelect(day.id, "selected-day"); });
-        day.addEventListener("click", function () { console.log(`day-id: ${day.id}`); }); // just for testing
-        day.addEventListener("click", function () { console.log(getDateString(day.id)); }); // just for testing
-        day.addEventListener("click", function () { console.log(getPrice(day.id)); });  // just for testing
-    });
-}
+//#region ********** CALENDAR BUILDER **********
 
 /**
  * Creates a table representing a calendar for a given month
@@ -198,15 +205,14 @@ function helperListeners() {
  * 
  * createCalendar("container", 2021, 4);
  */
-function createCalendar(container, year, month) {
+ function createCalendar(container, year, month) {
     // arrays for date related names
     const dayNames = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", 'Sep', "Oct", "Nov", "Dec"];
 
     // create a Date object for a given month,
-    // if day is not specified, default date is: year/month/1
+    // if day is not specified, default date is: year/month/1 
     let d = new Date(year, month);
-
 
     // create a table element for the calendar
     let table = document.createElement('table');
@@ -290,22 +296,47 @@ function createCalendar(container, year, month) {
  * @param {Date} date - a Date object
  * @returns {number} - day of week as number 0 to 6 starting Monday
  */
-function getDay(date) { // get day number from 0 (monday) to 6 (sunday)
+ function getDay(date) { // get day number from 0 (monday) to 6 (sunday)
     let day = date.getDay();
     if (day == 0) day = 7; // make Sunday (0) the last day
     return day - 1;
 }
 
 /**
- * Creates a n number of calendars in a given element
- * starting in a given month.
+ * Calculates the difference of months between
+ * two dates without considering the days
+ * 
+ * @param {Date} dateFrom - Date object for the earliest date
+ * @param {Date} dateTo - Date object for the latest date
+ * @returns {number} - Months difference between two dates
+ * 
+ * @example - Even though there are a few days difference between
+ * this two dates, the function will return 1 because they
+ * are in different months:
+ * 
+ *  let d1 = new Date(2021, 4, 31);
+ *  let d2 = new Date(2021, 5, 1);
+ *  console.log(monthDiff(d1,d2));
+ *  >> 1
+ */
+ function monthDiff(dateFrom, dateTo) {
+    let months = dateTo.getMonth() - dateFrom.getMonth();
+    // year difference adjustment
+    // if the dates are in different years add 12 months per year difference
+    months += 12 * (dateTo.getFullYear() - dateFrom.getFullYear());
+    return months;
+}
+
+/**
+ * Builds a given number (months) of calendars in a given element
+ * starting in a given month for the given year.
  * 
  * @param {string} container - An id of a DOM element to contain the calendars
  * @param {num} months - Number of months
  * @param {num} year - The year of the first month
  * @param {num} startMonth - The starting month (format 0-11, e.g. January is 0)
  */
-function createNCalendars(container, months, startYear, startMonth) {
+ function createNCalendars(container, months, startYear, startMonth) {
     let month = startMonth;
     let year = startYear;
 
@@ -337,8 +368,8 @@ function createNCalendars(container, months, startYear, startMonth) {
  * 
  * 'day-32'
  */
-function NumberAllDays() {
-    let days = document.querySelectorAll(".day-date"); // can be a constant string to name days
+ function NumberAllDays() {
+    let days = document.querySelectorAll(".day-date");
     for (let i = 0; i < days.length; i++) {
         days[i].id = `day-${i + 1}`;
     }
@@ -347,13 +378,13 @@ function NumberAllDays() {
 
 /**
  * Adds the class name 'today' to the corresponding
- * day passed as a Date of the first month. Only works
- * with the first month.
+ * day passed as a Date of the first month.
  * 
  * @param {Date} date - The Date object for the current day.
+ * 
  * @returns {string} - The id for today's element in the calendar
  */
-function MarkToday(date) {
+ function MarkToday(date) {
     let dayID = `day-${date.getDate()}`;
     let today = document.getElementById(`day-${date.getDate()}`);
     today.classList.add('today');
@@ -364,12 +395,13 @@ function MarkToday(date) {
  * Marks in the calendar a passed Date with the passed
  * class Name.
  * 
- * @param {Date} dateFirstDay - Date object for the first day of the set of calendars
+ * @param {Date} dateFirstDay - Date object for the first valid day of the set of calendars
  * @param {Date} dateToMark - Date object for the day to be marked
  * @param {string} className - The class name to be assigned
+ * 
  * @returns {string} - The id of the marked element
  */
-function MarkADay(dateFirstDay, dateToMark, className) {
+ function MarkADay(dateFirstDay, dateToMark, className) {
     let dayNum = (dateToMark.getTime() - dateFirstDay.getTime()) / msxDay;
     let dayId = `day-${Math.round(dayNum) + 1}`;
     let day = document.getElementById(dayId);
@@ -387,7 +419,7 @@ function MarkADay(dateFirstDay, dateToMark, className) {
  * @param {string} newClass - The name of the class to be assigned
  * @param {string} [oldClass=undefined] - The name of the class to be removed
  */
-function markDaysOutOfRange(day1ID, day2ID, selector, newClass, oldClass = undefined) {
+ function markDaysOutOfRange(day1ID, day2ID, selector, newClass, oldClass = undefined) {
     let firstDayNum = parseInt(day1ID.split("-")[1]);
     let lastDayNum = parseInt(day2ID.split("-")[1]);
     let days = document.querySelectorAll(selector);
@@ -408,64 +440,20 @@ function markDaysOutOfRange(day1ID, day2ID, selector, newClass, oldClass = undef
  * @param {number} day2IDNum - Latest day element id 
  * @param {string} className - The name of the class to be assigned
  */
-function markDaysInRange(day1IDNum, day2IDNum, className) {
+ function markDaysInRange(day1IDNum, day2IDNum, className) {
     for (let day = day1IDNum + 1; day < day2IDNum; day++) {
         let dayID = `day-${day}`;
         document.getElementById(dayID).classList.add(className);
     }
 }
 
-
-
-/**
- * Creates a valid date string for a given day-id that 
- * can be passed to a Date() constructor.
- * 
- * @param {string} dayID - Day element id in format "day-8"
- * @returns {string} - A valid Date string in format "Apr 16, 1998"
- */
-function getDateString(dayID) {
-    let day = document.getElementById(dayID);
-    let yearMonth = day.closest(".month").firstChild.firstChild.id;
-    let month = yearMonth.split("-")[0];
-    let year = yearMonth.split("-")[1];
-    let dateString = `${month} ${day.innerText}, ${year}`;
-    return dateString;
-}
-
-/**
- * Gets an returns the price stored in a "Season" object:
- * "LOW", "MID", "HIGH".    
- * 
- * @param {string} dayId - Day element id in format "day-8"
- * @returns {number} - The price per night for the given day
- */
-function getPrice(dayId) {
-    let dayEl = document.getElementById(dayId);
-    if (dayEl.classList.contains("LOW")) {
-        return LOW.price;
-    } else if (dayEl.classList.contains("MID")) {
-        return MID.price;
-    } else {
-        return HIGH.price;
-    }
-}
-
-function totalPrice(checkinIDNum, checkoutIDNum) {
-    let total = 0;
-    for (let i = checkinIDNum; i < checkoutIDNum; i++) {
-        total += getPrice(`day-${i}`);
-    }
-
-    return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', currencySign: 'accounting' }).format(total);
-}
-
 /**
  * Adds a class to the calendar day elements to identify 
- * in which season of the year the day falls
- * @param {string} dayClassName - DOMString containing the class name for calendar days
+ * in which season of the year each day falls
+ * 
+ * @param {string} dayClassName - A valid CSS selector of the class name for calendar days
  */
-function addSeasons(dayClassName) {
+ function addSeasons(dayClassName) {
     var days = document.querySelectorAll(dayClassName);
     days.forEach(day => {
         let dayDate = new Date(getDateString(day.id));
@@ -485,13 +473,31 @@ function addSeasons(dayClassName) {
 }
 
 /**
- * Adds the check-in class to the day with
- * the passed id.
+ *
+ * Gets all the elements in the document with the given
+ * selector and returns the count.
+ * 
+ * @param {string} selector - A DOMString containing one selector
+ * @returns {number} 
+ */
+ function HowManyElements(selector) {
+    let days = document.querySelectorAll(selector);
+    return days.length;
+}
+//#endregion
+
+//#region ********** MAIN CHECKIN AND OUT FUNCTIONALITY **********
+
+/**
+ * Allows the user to select or deselect the check-in and check-out
+ * dates and displays the selected dates and corresponding
+ * price depending of th season. Works in conjunction with
+ * an EventListener.
  * 
  * @param {string} dayID - Day element id in format "day-8"
  * @param {string} className - The name of the check-in class to be assigned
  */
-function CheckInNOut(dayID) {
+ function CheckInNOut(dayID) {
     let day = document.getElementById(dayID);
     let dayIDNum = parseInt(dayID.split("-")[1]);
 
@@ -669,32 +675,125 @@ function CheckInNOut(dayID) {
 }
 
 /**
- *
- * Gets all the elements in the document with the given
- * selector and returns the count.
+ * Creates a valid date string for a given day-id that 
+ * can be passed to a Date() constructor.
  * 
- * @param {string} selector - A valid CSS selector
- * @returns {number} 
+ * @param {string} dayID - Day element id in format "day-8"
+ * @returns {string} - A valid Date string in format "Apr 16, 1998"
  */
-function HowManyElements(selector) {
-    let days = document.querySelectorAll(selector);
-    return days.length;
+ function getDateString(dayID) {
+    let day = document.getElementById(dayID);
+    let yearMonth = day.closest(".month").firstChild.firstChild.id;
+    let month = yearMonth.split("-")[0];
+    let year = yearMonth.split("-")[1];
+    let dateString = `${month} ${day.innerText}, ${year}`;
+    return dateString;
 }
+
+/**
+ * Gets an returns the price stored in a "Season" object:
+ * "LOW", "MID", "HIGH".    
+ * 
+ * @param {string} dayId - Day element id in format "day-8"
+ * @returns {number} - The price per night for the given day
+ */
+ function getPrice(dayId) {
+    let dayEl = document.getElementById(dayId);
+    if (dayEl.classList.contains("LOW")) {
+        return LOW.price;
+    } else if (dayEl.classList.contains("MID")) {
+        return MID.price;
+    } else {
+        return HIGH.price;
+    }
+}
+
+
+/**
+ * Calculates and returns the total price for the selected stay
+ * 
+ * @param {number} checkinIDNum - The number part of the dayID for the Check-in day
+ * @param {number} checkoutIDNum - The number part of the dayID for the Check-out day
+ * @returns - A string with the total price of the stay in a currency format
+ */
+ function totalPrice(checkinIDNum, checkoutIDNum) {
+    let total = 0;
+    for (let i = checkinIDNum; i < checkoutIDNum; i++) {
+        total += getPrice(`day-${i}`);
+    }
+
+    return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', currencySign: 'accounting' }).format(total);
+}
+
+function removeClassMarker(selector, className) {
+    let days = document.querySelectorAll(selector);
+    days.forEach(day => {
+        day.classList.remove(className);
+    });
+}
+//#endregion
+
+//#region DEBUGGING AND DEPRECATED FUNCTIONS
+/**
+ * Adds debugging event listeners to day elements in the calendar
+ */
+ function helperListeners() {
+    let days = document.querySelectorAll("td.day-date");
+    days.forEach(day => {
+        //day.addEventListener("click", function () { daySelect(day.id, "selected-day"); });
+        //day.addEventListener("mouseover", function () { daySelect(day.id, "selected-day"); });
+        day.addEventListener("click", function () { console.log(`day-id: ${day.id}`); }); // just for testing
+        day.addEventListener("click", function () { console.log(getDateString(day.id)); }); // just for testing
+        day.addEventListener("click", function () { console.log(getPrice(day.id)); });  // just for testing
+    });
+}
+
+// /**
+//  * DEPRECATED
+//  * Toggles a specified class name to the day with
+//  * the passed id.
+//  * 
+//  * @param {string} dayID - Day element id in format "day-8"
+//  * @param {string} className - The name of the class to be assigned
+//  */
+// function daySelect(dayID, className) {
+//     let day = document.getElementById(dayID);
+//     day.classList.toggle(className);
+// }
+
+// /**
+//  * DEPRECATED
+//  * Finds out if a given class name exists in a group of
+//  * elements with the passed CSS selector
+//  * 
+//  * @param {string} classToSearch - The name of the class to search as a string
+//  * @param {string} selector - A DOMString.  Must be a valid CSS selector string:
+//  * @returns {boolean}
+//  * 
+//  * @example 
+//  * Does the class name "HIGH" exists in at least one of the 
+//  * elements with a class ".day-date":
+//  * 
+//  * elementsContain("HIGH", ".day-date");
+//  * 
+//  */
+//  function elementsContain(classToSearch, selector) {
+//     let elements = document.querySelectorAll(selector);
+//     for (let i = 0; i < elements.length; i++) {
+//         if (elements[i].classList.contains(classToSearch)) {
+//             return true;
+//         }
+//     }
+//     return false;
+// }
 
 //#endregion
 
-
-
-// TODO Clean functions, finish Jsdoc headers
-
-// TODO fix bug:
-// When clicking already selected checkout the dates selected get erased, 
-//thats ok, but then if the same is clicked without moving the mouse, 
-//the days get selected but the days are not selected again;
-
 // TODO:
-// When hovering after checkin is selected, add a red shadow as the one before
+// When hovering after checkin is selected, add a salmon shadow as the one before
 // the checkin is selected
+
+
 
 // const controller = new AbortController();// !!!!!!!!!!!!!This did the trick 
 // adding this controller to the listener:
