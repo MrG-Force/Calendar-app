@@ -39,6 +39,11 @@ const TotalPholder = "$0.00"
 // ---------TIME DATA ---------
 const msxDay = 86400000; // milliseconds per day
 // Current day and time values
+
+// ******* TEST RANDOM DATES ******* Uncomment to generate random dates on reload
+// var testDateGen = testRandomDates();
+// var now = testDateGen.next().value;
+
 var now = new Date();
 var currYear = now.getFullYear();
 var currMonth = now.getMonth();
@@ -566,6 +571,7 @@ function removeHandler(event, func, selector) {
             day.classList.toggle(CHECKIN.name); // Select day clicked as new Check in
             CHECKIN.dayID = dayID;
             CHECKIN.dayIDNum = dayIDNum;
+            removeClassMarker(".day-date", "hover-in");
             // Update CHECKIN output element
             document.getElementById(CHECKIN.outputEl).textContent = (getDateString(CHECKIN.dayID));
             // Add new handlers
@@ -789,6 +795,34 @@ function removeClassMarker(selector, className) {
 //#endregion
 
 //#region DEBUGGING AND DEPRECATED FUNCTIONS
+
+/**
+ * Generates 20 random date objects for testing random dates
+ * 
+ * @generator 
+ * @yields {date} A random date object between the years 2020 and 2040
+ */
+function* testRandomDates() {
+    var dates = {};
+    for (let index = 0; index < 20; index++) {
+        var year = 2020 + Math.floor((Math.random() * 20) + 1);
+        var month = Math.floor(Math.random() * 12);
+        var longMonths = [0, 2, 4, 6, 7, 9, 11];
+        if (longMonths.includes(month)) {
+            var day = Math.floor((Math.random() * 31) + 1);
+        } else if (month == 1) {
+            var day = Math.floor((Math.random() * 28) + 1);
+        } else {
+            var day = Math.floor((Math.random() * 30) + 1);
+        }
+        dates[index] = new Date(year, month, day)
+    }
+    for (let key in dates) {
+        let date = dates[key];
+        yield date;
+    }
+}
+
 /**
  * Adds debugging event listeners to day elements in the calendar
  */
@@ -802,6 +836,7 @@ function removeClassMarker(selector, className) {
         day.addEventListener("click", function () { console.log(getPrice(day.id)); });  // just for testing
     });
 }
+
 
 // /**
 //  * DEPRECATED
